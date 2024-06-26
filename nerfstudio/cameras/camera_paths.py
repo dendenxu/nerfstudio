@@ -28,7 +28,7 @@ from nerfstudio.cameras.cameras import Cameras, CameraType
 from nerfstudio.viewer_legacy.server.utils import three_js_perspective_camera_focal_length
 
 
-def get_smoothed_camera_path(cameras: Cameras, steps: int, smoothing: float = 10.0, camera_sequences: Optional[List[int]] = None) -> Cameras:
+def get_smoothed_camera_path(cameras: Cameras, steps: int, smoothing: float = 10.0, camera_sequence: Optional[List[int]] = None) -> Cameras:
     """Generate a camera path using smoothed bspline interpolation
 
     Args:
@@ -38,9 +38,9 @@ def get_smoothed_camera_path(cameras: Cameras, steps: int, smoothing: float = 10
     Returns:
         A new set of cameras along a path.
     """
-    if camera_sequences is not None:
-        Ks = cameras.get_intrinsics_matrices()[camera_sequences]
-        poses = cameras.camera_to_worlds[camera_sequences]
+    if camera_sequence is not None:
+        Ks = cameras.get_intrinsics_matrices()[camera_sequence]
+        poses = cameras.camera_to_worlds[camera_sequence]
     else:
         Ks = cameras.get_intrinsics_matrices()
         poses = cameras.camera_to_worlds

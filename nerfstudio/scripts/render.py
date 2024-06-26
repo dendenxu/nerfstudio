@@ -666,12 +666,12 @@ class RenderSmoothed(BaseRender):
             assert pipeline.datamanager.train_dataset is not None
             cameras = pipeline.datamanager.train_dataset.cameras
 
-        camera_sequences = list(map(int, self.camera_sequences)) if self.camera_sequences is not None else None
+        camera_sequence = list(map(int, self.camera_sequence)) if self.camera_sequence is not None else None
         seconds = self.frame_count / self.frame_rate
         camera_path = get_smoothed_camera_path(
             cameras=cameras,
             steps=self.frame_count,
-            camera_sequences=camera_sequences,
+            camera_sequence=camera_sequence,
             smoothing=self.smoothing_term,
         )
 
