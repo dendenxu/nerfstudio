@@ -644,7 +644,7 @@ class RenderSmoothed(BaseRender):
     """The smoothing term to use for interpolation."""
     camera_sequence: Optional[List[str]] = None
     """Select the cameras to use for interpolation."""
-    frame_rate: int = 60
+    frame_rate: int = 25
     """Frame rate of the output video."""
     output_format: Literal["images", "video"] = "video"
     """How to save output data."""
