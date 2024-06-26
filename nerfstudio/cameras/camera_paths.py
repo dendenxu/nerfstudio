@@ -16,15 +16,49 @@
 Code for camera paths.
 """
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, List
 
 import torch
+import math
 
 import nerfstudio.utils.poses as pose_utils
 from nerfstudio.cameras import camera_utils
 from nerfstudio.cameras.camera_utils import get_interpolated_poses_many
 from nerfstudio.cameras.cameras import Cameras, CameraType
 from nerfstudio.viewer_legacy.server.utils import three_js_perspective_camera_focal_length
+
+
+def get_smoothed_camera_path(cameras: Cameras, steps: int, smoothing: float = 10.0, camera_sequences: Optional[List[int]] = None) -> Cameras:
+    """Generate a camera path using smoothed bspline interpolation
+
+    Args:
+        cameras: Cameras object containing intrinsics of all cameras.
+        steps: The number of steps to interpolate between the two cameras.
+
+    Returns:
+        A new set of cameras along a path.
+    """
+    if camera_sequences is not None:
+        Ks = cameras.get_intrinsics_matrices()[camera_sequences]
+        poses = cameras.camera_to_worlds[camera_sequences]
+    else:
+        Ks = cameras.get_intrinsics_matrices()
+        poses = cameras.camera_to_worlds
+    
+    from easyvolcap.utils.cam_utils import interpolate_camera_lins, interpolate_camera_path
+    from easyvolcap.utils.data_utils import as_numpy_func, as_torch_func
+    Ks = as_torch_func(interpolate_camera_lins)(Ks.reshape(-1, 9), steps, smoothing).reshape(steps, 3, 3)
+    poses = as_torch_func(interpolate_camera_path)(poses.reshape(-1, 3, 4), steps, smoothing).reshape(steps, 3, 4)
+
+    cameras = Cameras(
+        fx=Ks[:, 0, 0],
+        fy=Ks[:, 1, 1],
+        cx=Ks[0, 0, 2],
+        cy=Ks[0, 1, 2],
+        camera_type=cameras.camera_type[0],
+        camera_to_worlds=poses,
+    )
+    return cameras
 
 
 def get_interpolated_camera_path(cameras: Cameras, steps: int, order_poses: bool) -> Cameras:

@@ -42,7 +42,7 @@ from rich.table import Table
 from torch import Tensor
 from typing_extensions import Annotated
 
-from nerfstudio.cameras.camera_paths import get_interpolated_camera_path, get_path_from_json, get_spiral_path
+from nerfstudio.cameras.camera_paths import get_interpolated_camera_path, get_smoothed_camera_path, get_path_from_json, get_spiral_path
 from nerfstudio.cameras.cameras import Cameras, CameraType, RayBundle
 from nerfstudio.data.datamanagers.base_datamanager import VanillaDataManager, VanillaDataManagerConfig
 from nerfstudio.data.datamanagers.full_images_datamanager import FullImageDatamanagerConfig
@@ -632,6 +632,65 @@ class RenderInterpolated(BaseRender):
             check_occlusions=self.check_occlusions,
         )
 
+@dataclass
+class RenderSmoothed(BaseRender):
+    """Render a trajectory that interpolates between training or eval dataset images."""
+
+    pose_source: Literal["eval", "train"] = "eval"
+    """Pose source to render."""
+    frame_count: int = 600
+    """Number of frames to use for the final interpolated output."""
+    smoothing_term: float = 40.0
+    """The smoothing term to use for interpolation."""
+    camera_sequences: Optional[List[str]] = None
+    """Select the cameras to use for interpolation."""
+    frame_rate: int = 60
+    """Frame rate of the output video."""
+    output_format: Literal["images", "video"] = "video"
+    """How to save output data."""
+
+    def main(self) -> None:
+        """Main function."""
+        _, pipeline, _, _ = eval_setup(
+            self.load_config,
+            eval_num_rays_per_chunk=self.eval_num_rays_per_chunk,
+            test_mode="test",
+        )
+
+        install_checks.check_ffmpeg_installed()
+
+        if self.pose_source == "eval":
+            assert pipeline.datamanager.eval_dataset is not None
+            cameras = pipeline.datamanager.eval_dataset.cameras
+        else:
+            assert pipeline.datamanager.train_dataset is not None
+            cameras = pipeline.datamanager.train_dataset.cameras
+
+        camera_sequences = list(map(int, self.camera_sequences)) if self.camera_sequences is not None else None
+        seconds = self.frame_count / self.frame_rate
+        camera_path = get_smoothed_camera_path(
+            cameras=cameras,
+            steps=self.frame_count,
+            camera_sequences=camera_sequences,
+            smoothing=self.smoothing_term,
+        )
+
+        _render_trajectory_video(
+            pipeline,
+            camera_path,
+            output_filename=self.output_path,
+            rendered_output_names=self.rendered_output_names,
+            rendered_resolution_scaling_factor=1.0 / self.downscale_factor,
+            seconds=seconds,
+            output_format=self.output_format,
+            image_format=self.image_format,
+            depth_near_plane=self.depth_near_plane,
+            depth_far_plane=self.depth_far_plane,
+            colormap_options=self.colormap_options,
+            render_nearest_camera=self.render_nearest_camera,
+            check_occlusions=self.check_occlusions,
+        )
+
 
 @dataclass
 class SpiralRender(BaseRender):
@@ -884,6 +943,7 @@ Commands = tyro.conf.FlagConversionOff[
     Union[
         Annotated[RenderCameraPath, tyro.conf.subcommand(name="camera-path")],
         Annotated[RenderInterpolated, tyro.conf.subcommand(name="interpolate")],
+        Annotated[RenderSmoothed, tyro.conf.subcommand(name="smoothed")],
         Annotated[SpiralRender, tyro.conf.subcommand(name="spiral")],
         Annotated[DatasetRender, tyro.conf.subcommand(name="dataset")],
     ]
