@@ -640,7 +640,7 @@ class RenderSmoothed(BaseRender):
     """Pose source to render."""
     frame_count: int = 600
     """Number of frames to use for the final interpolated output."""
-    smoothing_term: float = 40.0
+    smoothing_term: float = 1.0
     """The smoothing term to use for interpolation."""
     camera_sequence: Optional[List[str]] = None
     """Select the cameras to use for interpolation."""
