@@ -45,10 +45,10 @@ def get_smoothed_camera_path(cameras: Cameras, steps: int, smoothing: float = 10
         Ks = cameras.get_intrinsics_matrices()
         poses = cameras.camera_to_worlds
     
-    from easyvolcap.utils.cam_utils import interpolate_camera_lins, interpolate_camera_path
+    from easyvolcap.utils.cam_utils import interpolate_camera_lins, interpolate_camera_path, generate_focus_path
     from easyvolcap.utils.data_utils import as_numpy_func, as_torch_func
     Ks = as_torch_func(interpolate_camera_lins)(Ks.reshape(-1, 9), steps, smoothing).reshape(steps, 3, 3)
-    poses = as_torch_func(interpolate_camera_path)(poses.reshape(-1, 3, 4), steps, smoothing).reshape(steps, 3, 4)
+    poses = as_torch_func(generate_focus_path)(poses.reshape(-1, 3, 4), steps, smoothing).reshape(steps, 3, 4)
 
     cameras = Cameras(
         fx=Ks[:, 0, 0],
